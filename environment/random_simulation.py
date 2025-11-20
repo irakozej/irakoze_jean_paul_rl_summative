@@ -1,11 +1,3 @@
-# === environment/random_demo.py ===
-"""
-Random demonstration script. Runs the environment for N episodes taking random actions,
-showing the pygame visualization. This file fulfills the assignment requirement "static file that shows the agent taking random actions (not using a model)".
-
-Usage: python -m environment.random_demo
-"""
-
 import time
 from environment.custom_env import AdaptiveLearningEnv
 
@@ -20,7 +12,7 @@ def run_random_demo(episodes=3, seed=0):
             action = env.action_space.sample()
             obs, reward, done, info = env.step(action)
             env.render(mode='human')
-            # small delay so rendering is visible
+            
             time.sleep(0.08)
         print(f"Episode {ep} finished. Info: {info}")
     env.close()

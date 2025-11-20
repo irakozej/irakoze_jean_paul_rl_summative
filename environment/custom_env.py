@@ -1,18 +1,3 @@
-# === environment/custom_env.py ===
-"""
-Adaptive Learning Resource Navigator - custom_env.py
-Gymnasium-compatible environment for the summative assignment.
-Files created together in the canvas: custom_env.py, rendering.py, random_demo.py
-Reference screenshot (example, DO NOT USE AS ASSIGNMENT): /mnt/data/Screenshot 2025-11-20 at 23.01.56.png
-
-This environment models a digital tutor (agent) selecting learning resources for a simulated student.
-Action space: 7 discrete actions (deliver beginner / intermediate / advanced / practice / remediation / recommend break / assess)
-Observation: numeric vector including student mastery, engagement, fatigue, last_resource_one_hot, steps_remaining
-Rewards: shaped to encourage correct difficulty, engagement improvement, mastery gain; penalizes fatigue and irrelevant picks.
-
-Gym API: reset(), step(action), render(mode='human'|'rgb_array'), seed(), close()
-"""
-
 import gym
 import numpy as np
 from gym import spaces
@@ -49,12 +34,10 @@ class AdaptiveLearningEnv(gym.Env):
         self.seed(seed)
 
         # Observations:
-        # [mastery (0-1), engagement (0-1), fatigue (0-1), last_resource_onehot(7), steps_remaining_norm]
         obs_low = np.array([0.0, 0.0, 0.0] + [0.0] * 7 + [0.0], dtype=np.float32)
         obs_high = np.array([1.0, 1.0, 1.0] + [1.0] * 7 + [1.0], dtype=np.float32)
         self.observation_space = spaces.Box(obs_low, obs_high, dtype=np.float32)
 
-        # 7 discrete actions
         self.action_space = spaces.Discrete(len(self.ACTIONS))
 
         # internal state
@@ -78,12 +61,9 @@ class AdaptiveLearningEnv(gym.Env):
         if seed is not None:
             self.seed(seed)
         self.current_step = 0
-        # Student hidden state (sampled)
-        # mastery: how much the student already knows
         self.mastery = float(self.np_random.uniform(0.0, 0.4))
         # engagement: how engaged at start
         self.engagement = float(self.np_random.uniform(0.4, 0.9))
-        # fatigue: low at start
         self.fatigue = float(self.np_random.uniform(0.0, 0.2))
         self.last_action = -1
 
@@ -106,17 +86,7 @@ class AdaptiveLearningEnv(gym.Env):
 
         reward = 0.0
         info = {"action_name": action_name}
-
-        # Basic deterministic dynamics with stochastic noise
-        # Effects differ by action
-        # Deliver beginner: good if mastery low, improves mastery a bit
-        # Deliver intermediate: good if mastery medium
-        # Deliver advanced: good if mastery high
-        # Practice: consolidates learning
-        # Remediation: helps low mastery
-        # Break: reduces fatigue but small step penalty
-        # Assess: small reward for information (used for future planning)
-
+        
         # Convenience
         m = self.mastery
         e = self.engagement
@@ -161,7 +131,6 @@ class AdaptiveLearningEnv(gym.Env):
                 self.fatigue = min(1.0, f + 0.05)
 
         elif action_name == "give_practice":
-            # consolidates: increases mastery modestly, reduces forgetting
             delta = 0.04 + noise
             reward += 0.8 * delta
             self.mastery = min(1.0, m + delta)
@@ -181,20 +150,14 @@ class AdaptiveLearningEnv(gym.Env):
                 self.fatigue = min(1.0, f + 0.02)
 
         elif action_name == "recommend_break":
-            # reduce fatigue, small time cost
             reward -= 0.02
             self.fatigue = max(0.0, f - 0.2)
             self.engagement = min(1.0, e + 0.05)
 
         elif action_name == "assess_learning":
-            # no direct mastery change but yields information; small positive
             reward += 0.05
-            # assessment can change engagement slightly
             self.engagement = max(0.0, min(1.0, e + noise))
-            # small fatigue from assessment
             self.fatigue = min(1.0, f + 0.01)
-
-        # fatigue causes slowing of learning: if fatigue > 0.7, small penalty
         if self.fatigue > 0.7:
             penalty = (self.fatigue - 0.7) * 0.5
             reward -= penalty
@@ -209,10 +172,9 @@ class AdaptiveLearningEnv(gym.Env):
         # Terminal on mastery threshold
         if self.mastery >= 0.95:
             done = True
-            reward += 5.0  # final success bonus
+            reward += 5.0  
             info["outcome"] = "mastery_reached"
 
-        # fail condition: steps exceeded
         if self.current_step >= self.max_steps:
             done = True
             info.setdefault("outcome", "max_steps_reached")
@@ -221,11 +183,9 @@ class AdaptiveLearningEnv(gym.Env):
         return obs, float(reward), bool(done), info
 
     def render(self, mode="human"):
-        # Simple pygame-based rendering in rendering.py
         try:
             from environment import rendering
         except Exception:
-            # local import fallback (if run as package)
             import rendering
         return rendering.render_env(self, mode=mode)
 

@@ -1,11 +1,4 @@
 
-# === environment/rendering.py ===
-"""
-Lightweight pygame renderer for AdaptiveLearningEnv.
-Provides render_env(env, mode='human') -> None or rgb_array
-Keep visuals simple but clear to meet rubric "Good/Exemplary".
-"""
-
 import pygame
 import numpy as np
 
@@ -29,7 +22,6 @@ def render_env(env, mode='human'):
 
     _screen.fill((240, 240, 240))
 
-    # Draw a simple resource grid (1 row of 7 resource types for visualization)
     start_x = 20
     start_y = 20
     for i, name in enumerate(env.ACTIONS):
@@ -56,7 +48,7 @@ def render_env(env, mode='human'):
         txt = _FONT.render(line, True, (0, 0, 0))
         _screen.blit(txt, (sx, sy + i * 24))
 
-    # small legend / instructions
+    
     inst = _FONT.render('This visualization is for the assignment (custom).', True, (50, 50, 50))
     _screen.blit(inst, (20, 380))
 
@@ -65,9 +57,9 @@ def render_env(env, mode='human'):
         _clock.tick(10)
         return None
     elif mode == 'rgb_array':
-        # return RGB array
+      
         arr = pygame.surfarray.array3d(_screen)
-        # transpose to HxWxC
+        
         return np.transpose(arr, (1, 0, 2))
 
 
