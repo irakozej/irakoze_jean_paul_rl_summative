@@ -1,0 +1,11 @@
+episode,reward,steps,outcome
+0,6.151872843503952,21,mastery_reached
+1,6.098256774246693,10,mastery_reached
+2,2.7254378721117973,50,max_steps_reached
+3,5.858168363571167,8,mastery_reached
+4,2.5011076852679253,50,max_steps_reached
+5,6.263631992042065,22,mastery_reached
+6,5.98225411772728,9,mastery_reached
+7,6.055857136845589,12,mastery_reached
+8,2.341399971395731,50,max_steps_reached
+9,6.2206282168626785,11,mastery_reached

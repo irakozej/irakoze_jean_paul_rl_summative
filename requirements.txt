@@ -1,9 +1,10 @@
 gymnasium==0.29.1
 stable-baselines3==2.2.1
 torch>=2.2.0
-numpy
+numpy<2
 matplotlib
 opencv-python
 moviepy
 pygame
 pandas
+tensorboard

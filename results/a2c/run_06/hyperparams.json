@@ -1,0 +1,5 @@
+{
+  "learning_rate": 0.0003,
+  "n_steps": 5,
+  "gamma": 0.995
+}

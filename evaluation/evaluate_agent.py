@@ -21,6 +21,7 @@ from environment.custom_env import AdaptiveLearningEnv
 
 def evaluate_sb3(model_path, algo, episodes=100, seed=0):
     # Lazy imports to avoid heavy deps if not needed
+    from stable_baselines3.common.vec_env import DummyVecEnv
     if algo.lower() == 'dqn':
         from stable_baselines3 import DQN as SB3Model
     elif algo.lower() == 'ppo':
@@ -31,22 +32,24 @@ def evaluate_sb3(model_path, algo, episodes=100, seed=0):
         raise ValueError('Unsupported SB3 algo')
 
     env = AdaptiveLearningEnv(max_steps=50, seed=seed)
+    vec_env = DummyVecEnv([lambda: env])
     # load model
-    model = SB3Model.load(model_path, env=env)
+    model = SB3Model.load(model_path, env=vec_env)
 
     results = []
     for ep in range(episodes):
-        obs = env.reset()
+        obs = vec_env.reset()
         done = False
         total_reward = 0.0
         steps = 0
         while not done:
             action, _states = model.predict(obs, deterministic=True)
-            obs, reward, done, info = env.step(int(action))
-            total_reward += reward
+            obs, reward, done, info = vec_env.step(action)
+            total_reward += reward[0]  # reward is array
             steps += 1
-        results.append({'episode': ep, 'reward': total_reward, 'steps': steps, 'outcome': info.get('outcome', '')})
-    env.close()
+            done = done[0]  # done is array
+        results.append({'episode': ep, 'reward': total_reward, 'steps': steps, 'outcome': info[0].get('outcome', '')})
+    vec_env.close()
     return results
 
 
@@ -64,7 +67,7 @@ def evaluate_reinforce(model_path, episodes=100, seed=0):
 
     results = []
     for ep in range(episodes):
-        obs = env.reset()
+        obs, _ = env.reset()
         done = False
         total_reward = 0.0
         steps = 0
@@ -74,7 +77,8 @@ def evaluate_reinforce(model_path, episodes=100, seed=0):
                 logits = policy(obs_v)
                 probs = torch.softmax(logits, dim=-1).numpy().squeeze(0)
             action = int(np.argmax(probs))  # deterministic: choose argmax
-            obs, reward, done, info = env.step(action)
+            obs, reward, terminated, truncated, info = env.step(action)
+            done = terminated or truncated
             total_reward += reward
             steps += 1
         results.append({'episode': ep, 'reward': total_reward, 'steps': steps, 'outcome': info.get('outcome', '')})

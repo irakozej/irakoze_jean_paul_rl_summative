@@ -2,6 +2,7 @@ import os
 import argparse
 import json
 import random
+import sys
 from collections import deque
 
 import torch
@@ -9,6 +10,8 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 
+# Add parent directory to path for local imports
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from environment.custom_env import AdaptiveLearningEnv
 
 
@@ -57,21 +60,22 @@ def train_reinforce(env, total_episodes=2000, gamma=0.99, lr=1e-3, batch_size=5,
     all_lengths = []
 
     for ep in range(1, total_episodes + 1):
-        obs = env.reset()
+        obs, _ = env.reset()
         done = False
         rewards = []
         log_probs = []
         length = 0
 
         while not done:
-            obs_v = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
+            obs_v = torch.from_numpy(obs).float().unsqueeze(0)
             logits = policy(obs_v)
             probs = torch.softmax(logits, dim=-1)
             m = torch.distributions.Categorical(probs)
             action = m.sample()
             logp = m.log_prob(action)
 
-            obs, reward, done, info = env.step(int(action.item()))
+            obs, reward, terminated, truncated, info = env.step(int(action.item()))
+            done = terminated or truncated
             rewards.append(reward)
             log_probs.append(logp)
             length += 1

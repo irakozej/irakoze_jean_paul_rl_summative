@@ -34,7 +34,9 @@ def evaluate_if_needed(entry, episodes=100):
     # call evaluate_agent.py
     cmd = ['python', 'evaluation/evaluate_agent.py', '--model-path', model_path, '--algo', algo, '--episodes', str(episodes), '--out-dir', 'results/evaluation']
     print('Running:', ' '.join(cmd))
-    subprocess.run(cmd, check=True)
+    env = os.environ.copy()
+    env['PYTHONPATH'] = '.'
+    subprocess.run(cmd, check=True, env=env)
     return out_csv
 
 
