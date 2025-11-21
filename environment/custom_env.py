@@ -1,6 +1,6 @@
-import gym
+import gymnasium as gym
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 import math
 
 
@@ -67,7 +67,7 @@ class AdaptiveLearningEnv(gym.Env):
         self.fatigue = float(self.np_random.uniform(0.0, 0.2))
         self.last_action = -1
 
-        return self._get_obs()
+        return self._get_obs(), {}
 
     def _get_obs(self):
         one_hot = [0.0] * len(self.ACTIONS)
@@ -166,21 +166,22 @@ class AdaptiveLearningEnv(gym.Env):
         if self.engagement < 0.2:
             reward -= 0.1
 
-        done = False
+        terminated = False
+        truncated = False
         info.update({"mastery": self.mastery, "engagement": self.engagement, "fatigue": self.fatigue})
 
         # Terminal on mastery threshold
         if self.mastery >= 0.95:
-            done = True
-            reward += 5.0  
+            terminated = True
+            reward += 5.0
             info["outcome"] = "mastery_reached"
 
         if self.current_step >= self.max_steps:
-            done = True
+            truncated = True
             info.setdefault("outcome", "max_steps_reached")
 
         obs = self._get_obs()
-        return obs, float(reward), bool(done), info
+        return obs, float(reward), terminated, truncated, info
 
     def render(self, mode="human"):
         try:
