@@ -1,200 +1,103 @@
-import gymnasium as gym
+# ==============================
+# environment/custom_env.py (GUI-ready modifications)
+# ==============================
 import numpy as np
+import gymnasium as gym
 from gymnasium import spaces
-import math
-
+from .rendering import EnvRenderer
 
 class AdaptiveLearningEnv(gym.Env):
-    metadata = {"render.modes": ["human", "rgb_array"]}
+    metadata = {"render_modes": ["human"], "render_fps": 4}
 
-    ACTIONS = [
-        "deliver_beginner",
-        "deliver_intermediate",
-        "deliver_advanced",
-        "give_practice",
-        "give_remediation",
-        "recommend_break",
-        "assess_learning",
-    ]
-
-    RESOURCE_ONE_HOT = {
-        "deliver_beginner": 0,
-        "deliver_intermediate": 1,
-        "deliver_advanced": 2,
-        "give_practice": 3,
-        "give_remediation": 4,
-        "recommend_break": 5,
-        "assess_learning": 6,
-    }
-
-    def __init__(self, max_steps: int = 50, seed: int | None = None):
+    def __init__(self, render_mode=None):
         super().__init__()
-        self.max_steps = max_steps
-        self.current_step = 0
-        self.seed(seed)
+        
+        self.render_mode = render_mode
+        self.renderer = EnvRenderer() if render_mode == "human" else None
 
-        # Observations:
-        obs_low = np.array([0.0, 0.0, 0.0] + [0.0] * 7 + [0.0], dtype=np.float32)
-        obs_high = np.array([1.0, 1.0, 1.0] + [1.0] * 7 + [1.0], dtype=np.float32)
-        self.observation_space = spaces.Box(obs_low, obs_high, dtype=np.float32)
+        self.action_space = spaces.Discrete(4)  # 0=easy, 1=medium, 2=hard, 3=review
+        self.observation_space = spaces.Box(
+            low=0.0, high=1.0, shape=(11,), dtype=np.float32
+        )
 
-        self.action_space = spaces.Discrete(len(self.ACTIONS))
+        self.mastery = 0.2
+        self.difficulty = 0.3
+        self.max_steps = 50
+        self.step_count = 0
 
-        # internal state
-        self.mastery = None
-        self.engagement = None
-        self.fatigue = None
-        self.last_action = None
-
-        # rendering helper
-        self.renderer = None
-        self.screen = None
-        self.clock = None
-
-        self.reset()
-
-    def seed(self, seed=None):
-        self.np_random, seed = gym.utils.seeding.np_random(seed)
-        return [seed]
-
-    def reset(self, *, seed: int | None = None, options=None):
-        if seed is not None:
-            self.seed(seed)
-        self.current_step = 0
-        self.mastery = float(self.np_random.uniform(0.0, 0.4))
-        # engagement: how engaged at start
-        self.engagement = float(self.np_random.uniform(0.4, 0.9))
-        self.fatigue = float(self.np_random.uniform(0.0, 0.2))
-        self.last_action = -1
-
-        return self._get_obs(), {}
-
-    def _get_obs(self):
-        one_hot = [0.0] * len(self.ACTIONS)
-        if self.last_action is not None and self.last_action >= 0:
-            one_hot[self.last_action] = 1.0
-        steps_remaining_norm = max(0.0, (self.max_steps - self.current_step) / self.max_steps)
-        obs = [self.mastery, self.engagement, self.fatigue] + one_hot + [steps_remaining_norm]
-        return np.array(obs, dtype=np.float32)
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
+        self.mastery = 0.2
+        self.difficulty = 0.3
+        self.step_count = 0
+        state = np.array([self.mastery, self.difficulty] + [0.0]*9, dtype=np.float32)
+        return state, {}
 
     def step(self, action):
-        assert self.action_space.contains(action), f"Invalid action {action}"
-        self.current_step += 1
-        self.last_action = int(action)
+        self.step_count += 1
 
-        action_name = self.ACTIONS[action]
+        # Difficulty change
+        if action == 0:   # easy
+            self.difficulty = max(0.0, self.difficulty - 0.05)
+            reward = 0.1
+        elif action == 1: # medium
+            reward = 0.3
+        elif action == 2: # hard
+            self.difficulty = min(1.0, self.difficulty + 0.05)
+            reward = 0.6
+        else:             # review
+            reward = 0.2
 
-        reward = 0.0
-        info = {"action_name": action_name}
-        
-        # Convenience
-        m = self.mastery
-        e = self.engagement
-        f = self.fatigue
+        self.mastery = min(1.0, self.mastery + reward * 0.1)
 
-        # small random factor
-        noise = float(self.np_random.normal(0, 0.01))
+        state = np.array([self.mastery, self.difficulty] + [0.0]*9, dtype=np.float32)
+        terminated = self.mastery >= 0.95
+        truncated = self.step_count >= self.max_steps
 
-        if action_name == "deliver_beginner":
-            # best when mastery < 0.4
-            if m < 0.4:
-                delta = 0.05 + 0.05 * (0.4 - m) + noise
-                reward += 1.0 * min(0.15, delta)
-                self.mastery = min(1.0, m + delta)
-                self.engagement = min(1.0, e + 0.02)
-            else:
-                # too easy — small penalty
-                reward -= 0.2
-                self.engagement = max(0.0, e - 0.05)
-                self.fatigue = min(1.0, f + 0.02)
+        if self.render_mode == "human":
+            self.renderer.render(
+                state=state,
+                action=action,
+                reward=reward,
+                episode=0,
+                step=self.step_count,
+            )
 
-        elif action_name == "deliver_intermediate":
-            if 0.3 <= m < 0.7:
-                delta = 0.06 + 0.04 * (0.5 - abs(0.5 - m)) + noise
-                reward += 1.2 * min(0.18, delta)
-                self.mastery = min(1.0, m + delta)
-                self.engagement = min(1.0, e + 0.03)
-            else:
-                reward -= 0.25
-                self.engagement = max(0.0, e - 0.04)
-                self.fatigue = min(1.0, f + 0.03)
+        return state, reward, terminated, truncated, {}
 
-        elif action_name == "deliver_advanced":
-            if m >= 0.6:
-                delta = 0.07 + 0.03 * (m - 0.6) + noise
-                reward += 1.5 * min(0.2, delta)
-                self.mastery = min(1.0, m + delta)
-                self.engagement = min(1.0, e + 0.02)
-            else:
-                reward -= 0.35
-                self.engagement = max(0.0, e - 0.06)
-                self.fatigue = min(1.0, f + 0.05)
+    def render(self):
+        pass
 
-        elif action_name == "give_practice":
-            delta = 0.04 + noise
-            reward += 0.8 * delta
-            self.mastery = min(1.0, m + delta)
-            self.engagement = min(1.0, e + 0.01)
-            self.fatigue = min(1.0, f + 0.01)
 
-        elif action_name == "give_remediation":
-            # helps low-mastery students more
-            if m < 0.5:
-                delta = 0.08 + 0.05 * (0.5 - m) + noise
-                reward += 1.2 * min(0.25, delta)
-                self.mastery = min(1.0, m + delta)
-                self.engagement = min(1.0, e + 0.04)
-            else:
-                reward -= 0.15
-                self.engagement = max(0.0, e - 0.03)
-                self.fatigue = min(1.0, f + 0.02)
+# ==============================
+# simulation/run_dqn_gui.py
+# ==============================
+import time
+from stable_baselines3 import DQN
+from environment.custom_env import AdaptiveLearningEnv
 
-        elif action_name == "recommend_break":
-            reward -= 0.02
-            self.fatigue = max(0.0, f - 0.2)
-            self.engagement = min(1.0, e + 0.05)
+def run_gui(model_path="models/dqn/best_model.zip"):
+    env = AdaptiveLearningEnv(render_mode="human")
+    model = DQN.load(model_path)
 
-        elif action_name == "assess_learning":
-            reward += 0.05
-            self.engagement = max(0.0, min(1.0, e + noise))
-            self.fatigue = min(1.0, f + 0.01)
-        if self.fatigue > 0.7:
-            penalty = (self.fatigue - 0.7) * 0.5
-            reward -= penalty
+    obs, _ = env.reset()
+    episode_reward = 0
+    step = 0
 
-        # engagement drop if many poor choices
-        if self.engagement < 0.2:
-            reward -= 0.1
+    while True:
+        action, _ = model.predict(obs)
+        obs, reward, terminated, truncated, _ = env.step(action)
+        episode_reward += reward
+        step += 1
+        time.sleep(0.25)
 
-        terminated = False
-        truncated = False
-        info.update({"mastery": self.mastery, "engagement": self.engagement, "fatigue": self.fatigue})
+        if terminated or truncated:
+            print("Episode complete. Reward =", episode_reward)
+            time.sleep(1)
+            obs, _ = env.reset()
+            episode_reward = 0
+            step = 0
 
-        # Terminal on mastery threshold
-        if self.mastery >= 0.95:
-            terminated = True
-            reward += 5.0
-            info["outcome"] = "mastery_reached"
+if __name__ == "__main__":
+    run_gui()
 
-        if self.current_step >= self.max_steps:
-            truncated = True
-            info.setdefault("outcome", "max_steps_reached")
-
-        obs = self._get_obs()
-        return obs, float(reward), terminated, truncated, info
-
-    def render(self, mode="human"):
-        try:
-            from environment import rendering
-        except Exception:
-            import rendering
-        return rendering.render_env(self, mode=mode)
-
-    def close(self):
-        try:
-            from environment import rendering
-        except Exception:
-            import rendering
-        rendering.cleanup()
-
-# adding a comit here to test git changes

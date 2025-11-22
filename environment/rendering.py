@@ -1,76 +1,34 @@
+# ==============================
+# environment/rendering.py
+# ==============================
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
-import pygame
-import numpy as np
+class EnvRenderer:
+    def __init__(self):
+        self.fig, self.ax = plt.subplots(figsize=(6, 4))
+        self.ax.set_title("Adaptive Learning Environment – Live Simulation")
+        self.ax.set_xlim(0, 1)
+        self.ax.set_ylim(0, 1)
 
-_screen = None
-_clock = None
-_FONT = None
+        self.text_state = self.ax.text(0.05, 0.85, '', fontsize=12, va='top')
+        self.text_action = self.ax.text(0.05, 0.65, '', fontsize=12, va='top')
+        self.text_reward = self.ax.text(0.05, 0.45, '', fontsize=12, va='top')
+        self.text_episode = self.ax.text(0.05, 0.25, '', fontsize=12, va='top')
 
-CELL_W = 120
-CELL_H = 40
-MARGIN = 10
+        plt.tight_layout()
+        plt.ion()
+        plt.show()
 
+    def render(self, state, action, reward, episode, step):
+        mastery, difficulty = state[0], state[1]
 
-def render_env(env, mode='human'):
-    global _screen, _clock, _FONT
-    if _screen is None:
-        pygame.init()
-        _screen = pygame.display.set_mode((640, 480))
-        pygame.display.set_caption('Adaptive Learning Resource Navigator')
-        _clock = pygame.time.Clock()
-        _FONT = pygame.font.SysFont('Arial', 16)
+        self.text_state.set_text(f"State:\nMastery: {mastery:.3f}\nDifficulty: {difficulty:.3f}")
+        self.text_action.set_text(f"Action Taken: {action}")
+        self.text_reward.set_text(f"Reward: {reward:.3f}")
+        self.text_episode.set_text(f"Episode: {episode} | Step: {step}")
 
-    _screen.fill((240, 240, 240))
-
-    start_x = 20
-    start_y = 20
-    for i, name in enumerate(env.ACTIONS):
-        x = start_x
-        y = start_y + i * (CELL_H + 8)
-        rect = pygame.Rect(x, y, 420, CELL_H)
-        color = (200, 200, 200)
-        if env.last_action == i:
-            color = (170, 220, 170)
-        pygame.draw.rect(_screen, color, rect)
-        txt = _FONT.render(f"{i}: {name}", True, (0, 0, 0))
-        _screen.blit(txt, (x + 8, y + 8))
-
-    # Sidebar stats
-    sx = 460
-    sy = 20
-    stats = [
-        f"Step: {env.current_step}/{env.max_steps}",
-        f"Mastery: {env.mastery:.3f}",
-        f"Engagement: {env.engagement:.3f}",
-        f"Fatigue: {env.fatigue:.3f}",
-    ]
-    for i, line in enumerate(stats):
-        txt = _FONT.render(line, True, (0, 0, 0))
-        _screen.blit(txt, (sx, sy + i * 24))
-
-    
-    inst = _FONT.render('This visualization is for the assignment (custom).', True, (50, 50, 50))
-    _screen.blit(inst, (20, 380))
-
-    if mode == 'human':
-        pygame.display.flip()
-        _clock.tick(10)
-        return None
-    elif mode == 'rgb_array':
-      
-        arr = pygame.surfarray.array3d(_screen)
-        
-        return np.transpose(arr, (1, 0, 2))
-
-
-def cleanup():
-    global _screen, _clock
-    try:
-        pygame.quit()
-    except Exception:
-        pass
-    _screen = None
-    _clock = None
-
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()
 
 
