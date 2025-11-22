@@ -15,7 +15,7 @@ class AdaptiveLearningEnv(gym.Env):
         self.render_mode = render_mode
         self.renderer = EnvRenderer() if render_mode == "human" else None
 
-        self.action_space = spaces.Discrete(4)  # 0=easy, 1=medium, 2=hard, 3=review
+        self.action_space = spaces.Discrete(7)  # 0=Beginner, 1=Intermediate, 2=Advanced, 3=Practice, 4=Remediation, 5=Break, 6=Assess
         self.observation_space = spaces.Box(
             low=0.0, high=1.0, shape=(11,), dtype=np.float32
         )
@@ -36,17 +36,26 @@ class AdaptiveLearningEnv(gym.Env):
     def step(self, action):
         self.step_count += 1
 
-        # Difficulty change
-        if action == 0:   # easy
-            self.difficulty = max(0.0, self.difficulty - 0.05)
+        # Difficulty and reward based on action
+        if action == 0:   # Beginner: easy
+            self.difficulty = max(0.0, self.difficulty - 0.1)
             reward = 0.1
-        elif action == 1: # medium
+        elif action == 1: # Intermediate: medium
             reward = 0.3
-        elif action == 2: # hard
-            self.difficulty = min(1.0, self.difficulty + 0.05)
+        elif action == 2: # Advanced: hard
+            self.difficulty = min(1.0, self.difficulty + 0.1)
             reward = 0.6
-        else:             # review
+        elif action == 3: # Practice: review
             reward = 0.2
+        elif action == 4: # Remediation: adjust difficulty down
+            self.difficulty = max(0.0, self.difficulty - 0.05)
+            reward = 0.4
+        elif action == 5: # Break: no progress
+            reward = 0.0
+        elif action == 6: # Assess: assessment reward
+            reward = 0.5
+        else:
+            reward = 0.0
 
         self.mastery = min(1.0, self.mastery + reward * 0.1)
 
