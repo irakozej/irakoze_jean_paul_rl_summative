@@ -1,15 +1,3 @@
-# === evaluation/evaluate_agent.py ===
-"""
-Evaluate a single trained agent (SB3 DQN/PPO/A2C or PyTorch REINFORCE) on AdaptiveLearningEnv.
-Saves per-episode metrics to a CSV file in results/evaluation/<model_name>/
-
-Usage examples:
-  python evaluation/evaluate_agent.py --model-path models/ppo/run_01/final_model.zip --algo ppo --episodes 100
-  python evaluation/evaluate_agent.py --model-path models/reinforce/policy_final.pt --algo reinforce --episodes 100
-
-Note: Make sure project root is in PYTHONPATH when running.
-"""
-
 import argparse
 import os
 import csv
@@ -45,9 +33,9 @@ def evaluate_sb3(model_path, algo, episodes=100, seed=0):
         while not done:
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, done, info = vec_env.step(action)
-            total_reward += reward[0]  # reward is array
+            total_reward += reward[0]  
             steps += 1
-            done = done[0]  # done is array
+            done = done[0]  
         results.append({'episode': ep, 'reward': total_reward, 'steps': steps, 'outcome': info[0].get('outcome', '')})
     vec_env.close()
     return results
@@ -76,7 +64,7 @@ def evaluate_reinforce(model_path, episodes=100, seed=0):
                 obs_v = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
                 logits = policy(obs_v)
                 probs = torch.softmax(logits, dim=-1).numpy().squeeze(0)
-            action = int(np.argmax(probs))  # deterministic: choose argmax
+            action = int(np.argmax(probs))  
             obs, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
             total_reward += reward

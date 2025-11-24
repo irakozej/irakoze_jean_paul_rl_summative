@@ -1,6 +1,3 @@
-# main.py
-# Improved GUI with simulation speed control and better styling
-
 import tkinter as tk
 from tkinter import ttk
 from gui_app import AgentGUI

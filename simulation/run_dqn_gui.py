@@ -7,7 +7,7 @@ from stable_baselines3 import DQN
 from environment.custom_env import AdaptiveLearningEnv
 
 def main():
-    # Load environment with render_mode="human" for GUI
+    # Load environment
     env = AdaptiveLearningEnv(render_mode="human")
     model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models", "dqn", "run_01", "best_model")
 

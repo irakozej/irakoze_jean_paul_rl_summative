@@ -76,35 +76,4 @@ class AdaptiveLearningEnv(gym.Env):
         pass
 
 
-# ==============================
-# simulation/run_dqn_gui.py
-# ==============================
-import time
-from stable_baselines3 import DQN
-from environment.custom_env import AdaptiveLearningEnv
-
-def run_gui(model_path="models/dqn/best_model.zip"):
-    env = AdaptiveLearningEnv(render_mode="human")
-    model = DQN.load(model_path)
-
-    obs, _ = env.reset()
-    episode_reward = 0
-    step = 0
-
-    while True:
-        action, _ = model.predict(obs)
-        obs, reward, terminated, truncated, _ = env.step(action)
-        episode_reward += reward
-        step += 1
-        time.sleep(0.25)
-
-        if terminated or truncated:
-            print("Episode complete. Reward =", episode_reward)
-            time.sleep(1)
-            obs, _ = env.reset()
-            episode_reward = 0
-            step = 0
-
-if __name__ == "__main__":
-    run_gui()
 
