@@ -1,6 +1,7 @@
 import argparse
 import os
 import json
+import sys
 from itertools import product
 from stable_baselines3 import A2C
 from stable_baselines3.common.vec_env import DummyVecEnv
@@ -8,6 +9,7 @@ from stable_baselines3.common.callbacks import EvalCallback, StopTrainingOnRewar
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from environment.custom_env import AdaptiveLearningEnv
 
 
@@ -98,8 +100,9 @@ def main():
     total_timesteps = args.timesteps
 
     print(f"Starting A2C hyperparam search with {len(grid)} runs, {total_timesteps} timesteps each")
-    for i, params in enumerate(grid, start=1):
-        print(f"Starting run {i}/{len(grid)}: {params}")
+    start_run = 8  # Continue from run 08
+    for i, params in enumerate(grid[start_run-1:], start=start_run):
+        print(f"Starting run {i}/{len(grid) + start_run - 1}: {params}")
         train_one(i, params, total_timesteps, seed=args.seed + i)
 
     print("All A2C runs complete.")

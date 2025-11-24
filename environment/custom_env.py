@@ -9,9 +9,9 @@ from .rendering import EnvRenderer
 class AdaptiveLearningEnv(gym.Env):
     metadata = {"render_modes": ["human"], "render_fps": 4}
 
-    def __init__(self, render_mode=None):
+    def __init__(self, render_mode=None, max_steps=50, seed=None):
         super().__init__()
-        
+
         self.render_mode = render_mode
         self.renderer = EnvRenderer() if render_mode == "human" else None
 
@@ -22,8 +22,9 @@ class AdaptiveLearningEnv(gym.Env):
 
         self.mastery = 0.2
         self.difficulty = 0.3
-        self.max_steps = 50
+        self.max_steps = max_steps
         self.step_count = 0
+        self.seed = seed
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)

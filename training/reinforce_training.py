@@ -3,6 +3,7 @@ import argparse
 import json
 import random
 import sys
+from itertools import product
 from collections import deque
 
 import torch
@@ -34,6 +35,21 @@ class PolicyNet(nn.Module):
 def ensure_dirs():
     os.makedirs('models/reinforce', exist_ok=True)
     os.makedirs('results/reinforce', exist_ok=True)
+
+
+def get_hyperparam_grid():
+    learning_rates = [1e-4, 5e-4, 1e-3]
+    gammas = [0.95, 0.99]
+    batch_sizes = [5, 10]
+
+    combos = []
+    for lr, gm, bs in product(learning_rates, gammas, batch_sizes):
+        combos.append({
+            'learning_rate': lr,
+            'gamma': gm,
+            'batch_size': bs,
+        })
+    return combos[:10]  # at least 10
 
 
 def discount_rewards(rewards, gamma):
@@ -111,19 +127,40 @@ def train_reinforce(env, total_episodes=2000, gamma=0.99, lr=1e-3, batch_size=5,
         }, f, indent=2)
 
 
+def train_one(run_id: int, params: dict, total_episodes: int, seed: int = 0):
+    run_tag = f"run_{run_id:02d}"
+    model_dir = os.path.join('models', 'reinforce', run_tag)
+    log_dir = os.path.join('results', 'reinforce', run_tag)
+    os.makedirs(model_dir, exist_ok=True)
+    os.makedirs(log_dir, exist_ok=True)
+
+    with open(os.path.join(log_dir, 'hyperparams.json'), 'w') as f:
+        json.dump(params, f, indent=2)
+
+    env = AdaptiveLearningEnv(max_steps=50, seed=seed)
+    train_reinforce(env, total_episodes=total_episodes, gamma=params['gamma'], lr=params['learning_rate'], batch_size=params['batch_size'], seed=seed)
+    env.close()
+
+    with open(os.path.join(log_dir, 'train_done.txt'), 'w') as f:
+        f.write(f"Training finished for {run_tag}\n")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--episodes', type=int, default=2000)
-    parser.add_argument('--gamma', type=float, default=0.99)
-    parser.add_argument('--lr', type=float, default=1e-3)
-    parser.add_argument('--batch_size', type=int, default=5)
     parser.add_argument('--seed', type=int, default=0)
     args = parser.parse_args()
 
     ensure_dirs()
-    env = AdaptiveLearningEnv(max_steps=50, seed=args.seed)
-    train_reinforce(env, total_episodes=args.episodes, gamma=args.gamma, lr=args.lr, batch_size=args.batch_size, seed=args.seed)
-    env.close()
+    grid = get_hyperparam_grid()
+    total_episodes = args.episodes
+
+    print(f"Starting REINFORCE hyperparam search with {len(grid)} runs, {total_episodes} episodes each")
+    for i, params in enumerate(grid, start=1):
+        print(f"Starting run {i}/{len(grid)}: {params}")
+        train_one(i, params, total_episodes, seed=args.seed + i)
+
+    print("All REINFORCE runs complete.")
 
 
 if __name__ == '__main__':
