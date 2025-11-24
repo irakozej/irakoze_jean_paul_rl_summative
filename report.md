@@ -45,21 +45,23 @@ This report compares the performance of four reinforcement learning algorithms (
 
 ## Performance Comparison
 
-### Mean Reward
-```
-PPO:     5.79 ± 0.22
-REINFORCE: 5.60 ± 0.09
-DQN:     5.02 ± 1.73
-A2C:     2.53 ± 0.04
-```
+### Final Model Evaluation Results
+| Algorithm | Mean Reward | Std Reward | Success Rate | Episodes |
+|-----------|-------------|------------|--------------|----------|
+| **PPO** | **5.79** | 0.22 | **100%** | 100 |
+| **REINFORCE** | 5.60 | 0.09 | **100%** | 100 |
+| DQN | 5.02 | 1.73 | 70% | 100 |
+| A2C | 2.53 | 0.04 | 0% | 100 |
 
-### Success Rate (Mastery Achievement)
-```
-PPO:        100%
-REINFORCE:  100%
-DQN:         70%
-A2C:          0%
-```
+### Performance Visualizations
+
+#### Figure 1: Algorithm Comparison - Mean Reward and Success Rate
+![Algorithm Comparison](results/plots/algorithm_comparison.png)
+*Comparison of final model performance across all algorithms. PPO and REINFORCE achieve perfect success rates with highest rewards.*
+
+#### Figure 2: A2C Training Progress
+![A2C Training Progress](results/plots/a2c_reward_progress.png)
+*Example training curve showing episode reward progression during A2C hyperparameter tuning. Similar curves were generated for all algorithms.*
 
 ## Analysis
 
