@@ -1,16 +1,3 @@
-# gui_app.py
-"""
-Tkinter GUI for the Adaptive Learning Resource Navigator.
-Features:
-- Start / Pause / Reset controls
-- Load SB3 model (DQN/PPO/A2C)
-- Simulation speed slider (0.25x - 4x)
-- Live metrics panel (episode, step, reward)
-- Simple visual representation of the resource list and last action
-- Terminal-like log pane to show verbose outputs for the video
-
-Place this file in the project root (next to main.py) and run main.py to launch the GUI.
-"""
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import threading
@@ -22,16 +9,14 @@ import random
 # Set SB3 to use Gymnasium
 os.environ['SB3_USE_GYMNASIUM'] = '1'
 
-# Local imports
 try:
     from environment.custom_env import AdaptiveLearningEnv
 except Exception:
-    # If run from different cwd, try relative import
+   
     import sys
     sys.path.append(os.getcwd())
     from environment.custom_env import AdaptiveLearningEnv
 
-# Import stable-baselines3
 from stable_baselines3 import DQN, PPO, A2C
 
 
@@ -45,14 +30,13 @@ class AgentGUI(tk.Frame):
         self.running = False
         self.paused = False
         self.thread = None
-        self.speed = 1.0  # multiplier
-
+        self.speed = 1.0  
         self._build_ui()
         self.load_default_model()
 
     def load_default_model(self):
-        default_path = "models/a2c/run_09/final_model.zip"
-        algo = 'a2c'
+        default_path = "models/ppo/run_12/final_model.zip"
+        algo = 'ppo'
         self.txt_log.config(state='normal')
         self.txt_log.insert('end', f'Loading default {algo} model from {default_path}\n')
         self.txt_log.config(state='disabled')
@@ -60,7 +44,7 @@ class AgentGUI(tk.Frame):
 
         self.env = AdaptiveLearningEnv()
         try:
-            self.model = A2C.load(default_path)
+            self.model = PPO.load(default_path)
         except Exception as e:
             self.txt_log.config(state='normal')
             self.txt_log.insert('end', f'Failed to load default model: {e}\n')
@@ -76,11 +60,9 @@ class AgentGUI(tk.Frame):
         self.txt_log.see('end')
 
     def _build_ui(self):
-        # Layout: Left = canvas + controls, Right = metrics + log
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=0)
 
-        # Canvas frame
         left = ttk.Frame(self)
         left.grid(row=0, column=0, sticky='nsew', padx=8, pady=8)
         left.columnconfigure(0, weight=1)
@@ -88,7 +70,6 @@ class AgentGUI(tk.Frame):
         self.canvas = tk.Canvas(left, width=520, height=420, bg='#f7f7f7', highlightthickness=0)
         self.canvas.grid(row=0, column=0, sticky='nsew')
 
-        # control row
         ctrl = ttk.Frame(left)
         ctrl.grid(row=1, column=0, pady=(8,0), sticky='ew')
         ctrl.columnconfigure(6, weight=1)
@@ -110,7 +91,6 @@ class AgentGUI(tk.Frame):
         self.speed_slider.set(1.0)
         self.speed_slider.grid(row=0, column=5, sticky='ew', padx=4)
 
-        # Right panel: metrics & log
         right = ttk.Frame(self)
         right.grid(row=0, column=1, sticky='ns', padx=6, pady=8)
         right.rowconfigure(1, weight=1)
@@ -137,24 +117,21 @@ class AgentGUI(tk.Frame):
         self.txt_log.insert('end', 'Ready. Load a model to begin.\n')
         self.txt_log.config(state='disabled')
 
-        # Draw static visualization placeholders
         self._draw_static()
 
     def _draw_static(self):
-        # Resource list boxes
         self.canvas.delete('all')
         self.canvas.create_rectangle(10, 10, 510, 70, fill='#e9eef8', outline='')
-        self.canvas.create_text(20, 20, anchor='nw', text='Adaptive Learning Resource Navigator', font=('Helvetica', 12, 'bold'))
-        # Resource rows
+        self.canvas.create_text(20, 20, anchor='nw', text='Adaptive Learning Resource Navigator', font=('Helvetica', 18, 'bold'))
+
         self.resource_rects = []
         y = 90
         for i, label in enumerate(['Beginner', 'Intermediate', 'Advanced', 'Practice', 'Remediation', 'Break', 'Assess']):
             rect = self.canvas.create_rectangle(20, y, 500, y+50, fill='#ffffff', outline='#cccccc')
-            txt = self.canvas.create_text(260, y+25, anchor='center', text=f'{i}: {label}', font=('Helvetica', 12, 'bold'))
+            txt = self.canvas.create_text(260, y+25, anchor='center', text=f'{i}: {label}', font=('Helvetica', 16, 'bold'), fill='#000080')
             self.resource_rects.append((rect, txt))
             y += 60
 
-        # progress bar background
         self.canvas.create_rectangle(20, 460, 500, 490, fill='#e6e6e6', outline='')
         self.canvas.create_text(20, 470, anchor='w', text='Mastery Progress', font=('Helvetica', 10))
         self.progress_bar = self.canvas.create_rectangle(25, 465, 25, 485, fill='#4caf50', outline='')
@@ -163,7 +140,7 @@ class AgentGUI(tk.Frame):
         path = filedialog.askopenfilename(title='Select model file (final_model.zip)', filetypes=[('Zip', '*.zip'), ('All files', '*.*')])
         if not path:
             return
-        # Try to infer algorithm from path / filename
+
         if 'dqn' in path.lower():
             algo = 'dqn'
         elif 'ppo' in path.lower():
@@ -171,7 +148,7 @@ class AgentGUI(tk.Frame):
         elif 'a2c' in path.lower():
             algo = 'a2c'
         else:
-            # ask user
+           
             algo = tk.simpledialog.askstring('Algorithm', 'Enter algorithm (dqn/ppo/a2c)')
             if not algo:
                 return
@@ -234,9 +211,8 @@ class AgentGUI(tk.Frame):
         if self.env is None:
             self.env = AdaptiveLearningEnv()
         obs = self.env.reset()
-        # env.reset() returns obs (gym style) or (obs, info) depending on implementation
         if isinstance(obs, tuple) or isinstance(obs, list):
-            # if (obs, info) returned
+           
             obs = obs[0]
         self.current_obs = obs
         self.episode = 0
@@ -260,16 +236,9 @@ class AgentGUI(tk.Frame):
             if self.paused:
                 time.sleep(0.1)
                 continue
-            # For demo, use random action to show all states
+
             action = random.randint(0, 6)
-            # try:
-            #     action, _ = self.model.predict(self.current_obs, deterministic=True)
-            # except Exception:
-            #     # model.predict might expect a vector
-            #     action, _ = self.model.predict(np.array(self.current_obs), deterministic=True)
-            # step environment
             result = self.env.step(int(action))
-            # Gymnasium returns either (obs, reward, terminated, truncated, info) or (obs, reward, done, info)
             if len(result) == 5:
                 obs, reward, terminated, truncated, info = result
                 done = bool(terminated or truncated)
@@ -285,10 +254,8 @@ class AgentGUI(tk.Frame):
             self.episode_reward += float(reward)
             self.step += 1
 
-            # UI updates should run on main thread
             self.master.after(0, self.update_ui, action, reward, done, info)
 
-            # Wait according to speed slider (base 0.2s per step scaled)
             delay = max(0.01, 0.25 / self.speed)
             time.sleep(delay)
 
@@ -309,7 +276,7 @@ class AgentGUI(tk.Frame):
     def update_ui(self, action, reward, done, info):
         # update metrics
         self.update_metrics(self.episode, self.step, self.episode_reward, info.get('outcome') if isinstance(info, dict) else '-')
-        # highlight action (map action index to resource rows)
+
         try:
             self.highlight_action(int(action))
         except Exception:
